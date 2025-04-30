@@ -9,7 +9,105 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      import_logs: {
+        Row: {
+          created_at: string
+          errors: Json | null
+          failed_rows: number
+          filename: string
+          id: string
+          status: string
+          successful_rows: number
+          total_rows: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          errors?: Json | null
+          failed_rows?: number
+          filename: string
+          id?: string
+          status?: string
+          successful_rows?: number
+          total_rows?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          errors?: Json | null
+          failed_rows?: number
+          filename?: string
+          id?: string
+          status?: string
+          successful_rows?: number
+          total_rows?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          course: string
+          created_at: string
+          created_by: string
+          email: string
+          enrollment_date: string
+          grade: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          course: string
+          created_at?: string
+          created_by: string
+          email: string
+          enrollment_date?: string
+          grade: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          course?: string
+          created_at?: string
+          created_by?: string
+          email?: string
+          enrollment_date?: string
+          grade?: number
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
