@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { AtSign, Lock, User, UserPlus, LogIn } from 'lucide-react';
+import { AtSign, Lock, User, UserPlus, LogIn, BookOpen } from 'lucide-react';
 import { useAuth } from '@/providers/AuthProvider';
 
 const Auth = () => {
@@ -96,18 +96,29 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md mb-6 text-center">
-        <h1 className="text-3xl font-bold text-primary">Student Manager</h1>
-        <p className="text-gray-600 mt-2">Manage your student data efficiently</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+      <div className="w-full max-w-md mb-8 text-center">
+        <div className="flex justify-center mb-4">
+          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-float">
+            <BookOpen className="h-8 w-8 text-white" />
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
+          Student Manager
+        </h1>
+        <p className="text-gray-600 max-w-sm mx-auto">
+          A professional platform to manage your student data efficiently and securely
+        </p>
       </div>
       
-      <Card className="w-full max-w-md shadow-lg border-t-4 border-t-primary">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
+      <Card className="w-full max-w-md shadow-lg animate-in scale-in-2 rounded-xl overflow-hidden backdrop-blur-sm bg-white/90">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-xl"></div>
+        <CardHeader className="space-y-1 relative">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+          <CardTitle className="text-2xl font-bold text-center flex items-center justify-center gap-3">
             {isSignUp 
-              ? <><UserPlus className="h-5 w-5" /> Create an Account</>
-              : <><LogIn className="h-5 w-5" /> Welcome Back</>
+              ? <><UserPlus className="h-6 w-6 text-indigo-600" /> Create an Account</>
+              : <><LogIn className="h-6 w-6 text-indigo-600" /> Welcome Back</>
             }
           </CardTitle>
           <CardDescription className="text-center">
@@ -120,7 +131,7 @@ const Auth = () => {
           <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="font-medium">Full Name</Label>
+                <Label htmlFor="fullName" className="font-medium text-sm">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -135,7 +146,7 @@ const Auth = () => {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-medium">Email</Label>
+              <Label htmlFor="email" className="font-medium text-sm">Email</Label>
               <div className="relative">
                 <AtSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -150,7 +161,7 @@ const Auth = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="font-medium">Password</Label>
+              <Label htmlFor="password" className="font-medium text-sm">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -166,17 +177,22 @@ const Auth = () => {
             </div>
             <Button 
               type="submit" 
+              variant="gradient"
               className="w-full mt-6 transition-all hover:scale-[1.02]" 
               disabled={loading}
             >
-              {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
+              {loading 
+                ? <span className="flex items-center"><span className="animate-spin mr-2">◌</span>Processing...</span> 
+                : isSignUp 
+                  ? <span className="flex items-center"><UserPlus className="mr-1" /> Create Account</span> 
+                  : <span className="flex items-center"><LogIn className="mr-1" /> Sign In</span>}
             </Button>
           </form>
         </CardContent>
         <CardFooter>
           <Button
             variant="ghost"
-            className="w-full text-primary hover:text-primary/80"
+            className="w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all duration-300"
             onClick={() => setIsSignUp(!isSignUp)}
           >
             {isSignUp
@@ -186,8 +202,10 @@ const Auth = () => {
         </CardFooter>
       </Card>
       
-      <div className="mt-8 text-center text-sm text-gray-500">
-        <p>Protected by industry-leading security practices.</p>
+      <div className="mt-8 text-center text-sm text-gray-500 max-w-md">
+        <p className="bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm inline-block">
+          Protected by industry-leading security practices
+        </p>
       </div>
     </div>
   );
