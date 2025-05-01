@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import StudentForm from '@/components/StudentForm';
 import SearchBar from '@/components/SearchBar';
 import BatchImport from '@/components/BatchImport';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import StudentInsights from '@/components/StudentInsights';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -294,6 +294,19 @@ const Index = () => {
     });
   };
 
+  // Extract average grade from the student data for the StudentInsights component
+  const calculateAverageGrade = (): number => {
+    if (!students || students.length === 0) return 0;
+    const sum = students.reduce((acc, student) => acc + Number(student.grade), 0);
+    return Math.round(sum / students.length);
+  };
+
+  // Calculate course completion percentage (mock data)
+  const calculateCourseCompletion = (): number => {
+    // This would typically come from real data, but for demo purposes:
+    return Math.round(65 + Math.random() * 20);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 flex justify-center items-center h-64">
@@ -335,6 +348,13 @@ const Index = () => {
                 <AnalyticsDashboard />
               </CardContent>
             </Card>
+            
+            {/* New StudentInsights component */}
+            <StudentInsights 
+              studentCount={students.length}
+              averageGrade={calculateAverageGrade()}
+              courseCompletion={calculateCourseCompletion()}
+            />
             
             <div className="flex justify-center mt-8 animate-float">
               <button 
