@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Lock, User, ArrowRight, Github, Google, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Github, Globe, Loader2 } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -203,7 +202,7 @@ const Auth = () => {
                         <Input
                           id="password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
+                          placeholder="••••••���•"
                           className="pl-10"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
@@ -248,7 +247,7 @@ const Auth = () => {
                   
                   <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" type="button" onClick={handleGoogleSignIn} className="hover:bg-primary/5 transition-colors duration-300">
-                      <Google className="mr-2 h-4 w-4" />
+                      <Globe className="mr-2 h-4 w-4" />
                       Google
                     </Button>
                     <Button variant="outline" type="button" onClick={handleGithubSignIn} className="hover:bg-primary/5 transition-colors duration-300">
@@ -344,7 +343,7 @@ const Auth = () => {
                   
                   <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" type="button" onClick={handleGoogleSignIn} className="hover:bg-primary/5 transition-colors duration-300">
-                      <Google className="mr-2 h-4 w-4" />
+                      <Globe className="mr-2 h-4 w-4" />
                       Google
                     </Button>
                     <Button variant="outline" type="button" onClick={handleGithubSignIn} className="hover:bg-primary/5 transition-colors duration-300">
