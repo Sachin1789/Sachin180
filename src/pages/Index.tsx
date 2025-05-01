@@ -8,15 +8,18 @@ import StudentList from '@/components/StudentList';
 import StudentForm from '@/components/StudentForm';
 import SearchBar from '@/components/SearchBar';
 import BatchImport from '@/components/BatchImport';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 
 const Index = () => {
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -166,6 +169,15 @@ const Index = () => {
     setFilteredStudents(filtered);
   }, [searchQuery, students]);
 
+  // Handle welcome animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcomeAnimation(false);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -291,59 +303,93 @@ const Index = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Student Data Management</h1>
-        <p className="text-muted-foreground">
-          Manage student records, grades, and courses with bulk import capabilities.
-        </p>
+    <div className={`min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-background transition-opacity duration-500 ${showWelcomeAnimation ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="container mx-auto py-6 space-y-6 px-4">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-primary glow-text animate-float">Student Data Management</h1>
+          <p className="text-muted-foreground">
+            Manage student records, grades, and courses with enhanced analytics and bulk import capabilities.
+          </p>
+        </div>
+
+        <Tabs defaultValue="dashboard" className="w-full">
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-1 shadow-md mb-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dashboard</TabsTrigger>
+              <TabsTrigger value="students" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Student List</TabsTrigger>
+              <TabsTrigger value="import" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Batch Import</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="dashboard" className="space-y-4 pt-4">
+            <Card className="w-full glass-effect">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center">
+                  <span className="mr-2">Analytics Dashboard</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                    Real-time
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AnalyticsDashboard />
+              </CardContent>
+            </Card>
+            
+            <div className="flex justify-center mt-8 animate-float">
+              <button 
+                className="flex items-center text-primary hover:text-primary/80 transition-colors"
+                onClick={() => {
+                  document.getElementById('students-section')?.scrollIntoView({
+                    behavior: 'smooth'
+                  });
+                }}
+              >
+                Scroll to Students <ChevronDown className="ml-1" />
+              </button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="students" className="space-y-4 pt-4" id="students-section">
+            <Card className="w-full glass-effect">
+              <CardHeader className="pb-3">
+                <CardTitle>Students</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <SearchBar
+                    onSearch={handleSearch}
+                    onAddNew={() => {
+                      setSelectedStudent(undefined);
+                      setIsStudentFormOpen(true);
+                    }}
+                  />
+                  
+                  <StudentList
+                    students={filteredStudents}
+                    onEditStudent={handleEditStudent}
+                    onDeleteStudent={handleDeleteStudent}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="import" className="pt-4">
+            <BatchImport onStudentsImported={handleStudentsImported} />
+          </TabsContent>
+        </Tabs>
+
+        <StudentForm
+          open={isStudentFormOpen}
+          onClose={() => {
+            setIsStudentFormOpen(false);
+            setSelectedStudent(undefined);
+          }}
+          onSubmit={selectedStudent ? handleSubmitEdit : handleAddStudent}
+          student={selectedStudent}
+        />
       </div>
-
-      <Tabs defaultValue="students" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="students">Student List</TabsTrigger>
-          <TabsTrigger value="import">Batch Import</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="students" className="space-y-4 pt-4">
-          <Card className="w-full">
-            <CardHeader className="pb-3">
-              <CardTitle>Students</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <SearchBar
-                  onSearch={handleSearch}
-                  onAddNew={() => {
-                    setSelectedStudent(undefined);
-                    setIsStudentFormOpen(true);
-                  }}
-                />
-                
-                <StudentList
-                  students={filteredStudents}
-                  onEditStudent={handleEditStudent}
-                  onDeleteStudent={handleDeleteStudent}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="import" className="pt-4">
-          <BatchImport onStudentsImported={handleStudentsImported} />
-        </TabsContent>
-      </Tabs>
-
-      <StudentForm
-        open={isStudentFormOpen}
-        onClose={() => {
-          setIsStudentFormOpen(false);
-          setSelectedStudent(undefined);
-        }}
-        onSubmit={selectedStudent ? handleSubmitEdit : handleAddStudent}
-        student={selectedStudent}
-      />
     </div>
   );
 };
