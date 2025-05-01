@@ -10,8 +10,17 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./providers/AuthProvider";
 import PrivateRoute from "./components/PrivateRoute";
 import Header from "./components/Header";
+import PerformanceReport from "./pages/PerformanceReport";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -26,6 +35,11 @@ const App = () => (
             <Route path="/" element={
               <PrivateRoute>
                 <Index />
+              </PrivateRoute>
+            } />
+            <Route path="/performance-report" element={
+              <PrivateRoute>
+                <PerformanceReport />
               </PrivateRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
