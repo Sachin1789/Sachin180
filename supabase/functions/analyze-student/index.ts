@@ -41,8 +41,8 @@ serve(async (req) => {
     Keep your response concise and focus on actionable advice.
     `;
 
-    // Call the Gemini API with updated endpoint
-    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent", {
+    // Updated endpoint and model name for Gemini API
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

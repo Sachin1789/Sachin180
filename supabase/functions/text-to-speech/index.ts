@@ -28,10 +28,8 @@ serve(async (req) => {
 
     console.log("Converting to speech:", text.substring(0, 50) + "...");
 
-    // Use Gemini API to convert text to speech
-    // Note: We're using the same Gemini API for text-to-speech
-    // since we're already integrated with it for other features
-    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent", {
+    // Updated endpoint and model name for Gemini API
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
