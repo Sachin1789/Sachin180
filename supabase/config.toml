@@ -38,3 +38,7 @@ verify_jwt = true
 
 [functions.analyze-student]
 verify_jwt = true
+
+[functions.text-to-speech]
+verify_jwt = true
+

@@ -11,6 +11,8 @@ export const generateInsightsWithGemini = async (
   context: string = 'general'
 ): Promise<GeminiResponse> => {
   try {
+    console.log("Calling gemini-insights function with context:", context);
+    
     // In a production app, this would call a Supabase Edge Function
     // that securely uses the Gemini API key stored in Supabase Secrets
     const { data, error } = await supabase.functions.invoke('gemini-insights', {
@@ -41,6 +43,8 @@ export const analyzeStudentPerformance = async (
   historicalData?: any[]
 ): Promise<GeminiResponse> => {
   try {
+    console.log("Calling analyze-student function for student:", student?.name);
+    
     // In a production app, this would call a Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('analyze-student', {
       body: { student, historicalData }
@@ -59,6 +63,36 @@ export const analyzeStudentPerformance = async (
     console.error('Exception analyzing student performance:', err);
     return { 
       text: "Unable to analyze performance at this time.",
+      error: err instanceof Error ? err.message : String(err)
+    };
+  }
+};
+
+// Add helper function to use text-to-speech services
+export const generateSpeechFromText = async (
+  text: string
+): Promise<GeminiResponse> => {
+  try {
+    console.log("Calling text-to-speech function");
+    
+    // Call the Supabase Edge Function for text-to-speech
+    const { data, error } = await supabase.functions.invoke('text-to-speech', {
+      body: { text }
+    });
+
+    if (error) {
+      console.error('Error generating speech:', error);
+      return { 
+        text: "Unable to generate speech at this time.",
+        error: error.message 
+      };
+    }
+
+    return { text: data.speechText };
+  } catch (err) {
+    console.error('Exception generating speech:', err);
+    return { 
+      text: "Unable to generate speech at this time.",
       error: err instanceof Error ? err.message : String(err)
     };
   }

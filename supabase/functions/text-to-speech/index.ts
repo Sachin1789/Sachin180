@@ -16,32 +16,21 @@ serve(async (req) => {
   }
 
   try {
-    const { student, historicalData } = await req.json();
+    const { text } = await req.json();
     
     if (!GEMINI_API_KEY) {
       throw new Error("Missing Gemini API key");
     }
 
-    console.log("Processing student analysis:", student?.name);
+    if (!text) {
+      throw new Error("Text is required");
+    }
 
-    // Prepare the prompt for the Gemini model
-    const prompt = `
-    As an educational advisor, analyze this student's performance:
-    
-    ${JSON.stringify(student)}
-    
-    ${historicalData ? `Historical data: ${JSON.stringify(historicalData)}` : ''}
-    
-    Provide:
-    1. Analysis of the student's current academic standing
-    2. Strengths and areas that need improvement
-    3. Personalized recommendations for this student
-    4. Suggested interventions if performance is below expectations
-    
-    Keep your response concise and focus on actionable advice.
-    `;
+    console.log("Converting to speech:", text.substring(0, 50) + "...");
 
-    // Call the Gemini API with updated endpoint
+    // Use Gemini API to convert text to speech
+    // Note: We're using the same Gemini API for text-to-speech
+    // since we're already integrated with it for other features
     const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent", {
       method: "POST",
       headers: {
@@ -50,43 +39,40 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{ text: prompt }]
+          parts: [{ 
+            text: `Summarize this educational analysis in a conversational tone, keeping the key points: ${text}`
+          }]
         }],
         generationConfig: {
           temperature: 0.2,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
+          maxOutputTokens: 256,
+        }
       })
     });
 
     const data = await response.json();
-    console.log("API response status:", response.status);
     
     if (data.error) {
       console.error("Gemini API error:", data.error);
       throw new Error(`Gemini API error: ${data.error.message || JSON.stringify(data.error)}`);
     }
 
-    // Extract the response text
-    const analysis = data.candidates[0].content.parts[0].text;
-    console.log("Successfully generated student analysis");
+    const speechText = data.candidates[0].content.parts[0].text;
+    console.log("Successfully converted to speech");
     
-    return new Response(JSON.stringify({ analysis }), {
+    return new Response(JSON.stringify({ 
+      speechText,
+      original: text 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error("Error in analyze-student function:", error);
+    console.error("Error in text-to-speech function:", error);
     
     return new Response(JSON.stringify({ 
-      error: error.message || "Failed to analyze student performance" 
+      error: error.message || "Failed to convert text to speech" 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

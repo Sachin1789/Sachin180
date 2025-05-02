@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -6,13 +5,14 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowUpIcon, ArrowDownIcon, CalendarIcon, Download, FileJson, Brain } from 'lucide-react';
+import { ArrowUpIcon, ArrowDownIcon, CalendarIcon, Download, FileJson, Brain, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PerformanceTrends from '@/components/PerformanceTrends';
 import { analyzeStudentPerformance } from '@/utils/geminiApi';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from 'sonner';
+import VoiceAssistant from '@/components/VoiceAssistant';
 
 const PerformanceReport = () => {
   const [timeRange, setTimeRange] = useState<string>('month');
@@ -20,6 +20,7 @@ const PerformanceReport = () => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [studentAnalysis, setStudentAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
   
   // Fetch performance data with time range filter
   const { data: performanceData, isLoading } = useQuery({
@@ -167,7 +168,18 @@ const PerformanceReport = () => {
                         </div>
                       ) : studentAnalysis ? (
                         <div className="p-2 space-y-2 text-sm animate-in fade-in">
-                          <h4 className="font-medium text-lg">AI Analysis for {student.name}</h4>
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium text-lg">AI Analysis for {student.name}</h4>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex items-center gap-1"
+                              onClick={() => setVoiceAssistantOpen(true)}
+                            >
+                              <Volume2 className="h-3.5 w-3.5" />
+                              Voice
+                            </Button>
+                          </div>
                           <div className="whitespace-pre-line">{studentAnalysis}</div>
                         </div>
                       ) : (
@@ -230,6 +242,14 @@ const PerformanceReport = () => {
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
             <Download className="h-4 w-4" />
             Export
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setVoiceAssistantOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Volume2 className="h-4 w-4" />
+            Voice Assistant
           </Button>
         </div>
       </div>
@@ -387,6 +407,13 @@ const PerformanceReport = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Voice Assistant */}
+      <VoiceAssistant 
+        isOpen={voiceAssistantOpen} 
+        onClose={() => setVoiceAssistantOpen(false)}
+        content={studentAnalysis || undefined}
+      />
     </div>
   );
 };

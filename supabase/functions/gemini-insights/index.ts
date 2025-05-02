@@ -22,6 +22,9 @@ serve(async (req) => {
       throw new Error("Missing Gemini API key");
     }
 
+    console.log("Processing request with context:", context);
+    console.log("Performance data:", JSON.stringify(performanceData).slice(0, 200) + "...");
+
     // Prepare the prompt for the Gemini model
     const prompt = `
     As an educational analytics expert, analyze the following student performance data:
@@ -38,8 +41,8 @@ serve(async (req) => {
     Keep your response concise and specific to the data provided, focusing on practical advice.
     `;
 
-    // Call the Gemini API
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
+    // Call the Gemini API with updated endpoint and parameters
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -65,13 +68,16 @@ serve(async (req) => {
     });
 
     const data = await response.json();
+    console.log("API response status:", response.status);
     
     if (data.error) {
-      throw new Error(`Gemini API error: ${data.error.message}`);
+      console.error("Gemini API error:", data.error);
+      throw new Error(`Gemini API error: ${data.error.message || JSON.stringify(data.error)}`);
     }
 
     // Extract the response text
     const insight = data.candidates[0].content.parts[0].text;
+    console.log("Successfully generated insight");
     
     return new Response(JSON.stringify({ insight }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
