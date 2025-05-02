@@ -16,7 +16,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { TrendingUp, TrendingDown, Star, Database, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Star, Database, Zap, Loader2 } from "lucide-react";
+import { generateInsightsWithGemini } from "@/utils/geminiApi";
 
 // Sample data - in a real implementation, this would come from an API
 const generatePerformanceData = (period: string) => {
@@ -67,6 +68,8 @@ const PerformanceTrends = () => {
   const [data, setData] = useState(generatePerformanceData(timePeriod));
   const [activeTab, setActiveTab] = useState<'chart' | 'topPerformers' | 'needsImprovement'>('chart');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   
   // Calculate average grade
   const averageGrade = data.reduce((acc, curr) => acc + curr.grade, 0) / data.length;
@@ -80,6 +83,8 @@ const PerformanceTrends = () => {
   const handlePeriodChange = (value: string) => {
     setTimePeriod(value);
     setData(generatePerformanceData(value));
+    setAiInsight(null);
+    setAiError(null);
   };
 
   // Get the progress bar color based on the grade
@@ -90,18 +95,47 @@ const PerformanceTrends = () => {
     return "#EF4444"; // Red
   };
   
-  // Simulate AI insight generation (would be replaced by actual Gemini API call)
+  // Generate insights using Gemini API
   useEffect(() => {
-    // In production, this would be a call to the Gemini API
-    setTimeout(() => {
-      if (timePeriod === 'year') {
-        setAiInsight("AI analysis shows consistent improvement throughout the year with notable acceleration in the final quarter. Recommend maintaining current teaching strategies with additional focus on peer learning.");
-      } else if (timePeriod === 'last6months') {
-        setAiInsight("Mid-year performance shows steady improvement. Group study sessions appear to be effective based on correlation with implementation dates.");
-      } else {
-        setAiInsight("Recent 3-month trend suggests positive response to the new curriculum with grades improving steadily. Continue monitoring progress weekly.");
+    const fetchInsights = async () => {
+      setIsLoadingInsights(true);
+      setAiError(null);
+      
+      try {
+        // Real API call to Gemini
+        const performanceDataForAI = {
+          timePeriod,
+          averageGrade: roundedAverage,
+          gradeTrend: data[data.length - 1].grade - data[0].grade,
+          dataPoints: data,
+          topPerformersCount: topPerformers.length,
+          needsImprovementCount: needsImprovement.length
+        };
+        
+        const result = await generateInsightsWithGemini(
+          [performanceDataForAI], 
+          `Educational performance trends for ${timePeriod === 'year' ? 'the past year' : timePeriod === 'last6months' ? 'the last 6 months' : 'the last 3 months'}`
+        );
+        
+        if (result.error) {
+          setAiError("Could not generate insights: " + result.error);
+          setAiInsight(null);
+        } else {
+          setAiInsight(result.text);
+        }
+      } catch (err) {
+        console.error("Error fetching insights:", err);
+        setAiError("An error occurred while generating insights");
+        setAiInsight(null);
+      } finally {
+        setIsLoadingInsights(false);
       }
-    }, 1000);
+    };
+
+    // Fetch insights when the time period changes
+    if (timePeriod) {
+      fetchInsights();
+    }
   }, [timePeriod]);
 
   // Render student tables
@@ -256,17 +290,27 @@ const PerformanceTrends = () => {
         )}
 
         <div className="mt-4 p-3 bg-muted/50 rounded-md text-sm">
-          {aiInsight ? (
-            <>
-              <p className="font-semibold text-center flex items-center justify-center gap-2">
-                <Zap className="h-4 w-4 text-yellow-500" /> AI-Powered Insights
-              </p>
-              <p className="mt-2 text-muted-foreground italic">{aiInsight}</p>
-            </>
-          ) : (
+          <p className="font-semibold text-center flex items-center justify-center gap-2">
+            <Zap className="h-4 w-4 text-yellow-500" /> AI-Powered Insights
+          </p>
+
+          {isLoadingInsights ? (
             <div className="flex justify-center items-center h-16">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-              <span className="ml-2 text-sm text-muted-foreground">Generating insights...</span>
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="ml-2 text-sm text-muted-foreground">Generating insights with Gemini AI...</span>
+            </div>
+          ) : aiError ? (
+            <div className="text-center p-3 text-destructive">
+              <p>{aiError}</p>
+              <p className="text-xs mt-1">Please check your Gemini API key configuration.</p>
+            </div>
+          ) : aiInsight ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-muted-foreground">{aiInsight}</p>
+            </div>
+          ) : (
+            <div className="text-center p-3 text-muted-foreground">
+              <p>No insights generated yet.</p>
             </div>
           )}
           

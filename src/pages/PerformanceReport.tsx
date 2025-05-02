@@ -6,14 +6,20 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowUpIcon, ArrowDownIcon, CalendarIcon, Download, FileJson } from 'lucide-react';
+import { ArrowUpIcon, ArrowDownIcon, CalendarIcon, Download, FileJson, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PerformanceTrends from '@/components/PerformanceTrends';
+import { analyzeStudentPerformance } from '@/utils/geminiApi';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from 'sonner';
 
 const PerformanceReport = () => {
   const [timeRange, setTimeRange] = useState<string>('month');
   const [exportFormat, setExportFormat] = useState<string>('csv');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentAnalysis, setStudentAnalysis] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Fetch performance data with time range filter
   const { data: performanceData, isLoading } = useQuery({
@@ -59,6 +65,8 @@ const PerformanceReport = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast.success('CSV file exported successfully');
     } else if (exportFormat === 'json') {
       const jsonContent = JSON.stringify(performanceData, null, 2);
       const blob = new Blob([jsonContent], { type: 'application/json' });
@@ -68,8 +76,113 @@ const PerformanceReport = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast.success('JSON file exported successfully');
     }
   };
+  
+  // Get status badge for grade
+  const getStatusBadge = (grade: number) => {
+    if (grade >= 90) return <Badge variant="success">Excellent</Badge>;
+    if (grade >= 80) return <Badge variant="info">Good</Badge>;
+    if (grade >= 70) return <Badge variant="warning">Average</Badge>;
+    return <Badge variant="destructive">Needs Improvement</Badge>;
+  };
+  
+  // Handle student selection for analysis
+  const handleAnalyzeStudent = async (student: any) => {
+    if (selectedStudent?.id === student.id) {
+      setSelectedStudent(null);
+      setStudentAnalysis(null);
+      return;
+    }
+    
+    setSelectedStudent(student);
+    setIsAnalyzing(true);
+    setStudentAnalysis(null);
+    
+    try {
+      // Get AI analysis for the selected student
+      const result = await analyzeStudentPerformance(student);
+      
+      if (result.error) {
+        console.error("Error analyzing student:", result.error);
+        toast.error("Could not analyze student performance");
+        setStudentAnalysis(null);
+      } else {
+        setStudentAnalysis(result.text);
+      }
+    } catch (err) {
+      console.error("Exception analyzing student:", err);
+      toast.error("Failed to analyze student performance");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+  
+  const renderStudentTable = (students: any[]) => (
+    <div className="overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Course</TableHead>
+            <TableHead>Grade</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {students.map((student) => {
+            const isSelected = selectedStudent?.id === student.id;
+            return (
+              <React.Fragment key={student.id}>
+                <TableRow className={`hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
+                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell>{student.email}</TableCell>
+                  <TableCell>{student.course}</TableCell>
+                  <TableCell className="flex items-center gap-2">
+                    {student.grade}% {getStatusBadge(Number(student.grade))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleAnalyzeStudent(student)}
+                      disabled={isAnalyzing && selectedStudent?.id !== student.id}
+                      className="flex items-center gap-1"
+                    >
+                      <Brain className="h-3.5 w-3.5" />
+                      {isSelected ? "Hide Analysis" : "Analyze"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+                {isSelected && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="bg-muted/30 p-4">
+                      {isAnalyzing ? (
+                        <div className="flex items-center justify-center p-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="ml-2">Analyzing student performance...</span>
+                        </div>
+                      ) : studentAnalysis ? (
+                        <div className="p-2 space-y-2 text-sm animate-in fade-in">
+                          <h4 className="font-medium text-lg">AI Analysis for {student.name}</h4>
+                          <div className="whitespace-pre-line">{studentAnalysis}</div>
+                        </div>
+                      ) : (
+                        <p className="text-center text-muted-foreground">Analysis not available</p>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
   
   if (isLoading) {
     return (
@@ -194,9 +307,10 @@ const PerformanceReport = () => {
       </div>
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="grid w-full grid-cols-4 mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="courses">Course Analysis</TabsTrigger>
+          <TabsTrigger value="topPerformers">Top Performers</TabsTrigger>
+          <TabsTrigger value="needsImprovement">Needs Improvement</TabsTrigger>
           <TabsTrigger value="trends">Performance Trends</TabsTrigger>
         </TabsList>
         
@@ -215,17 +329,48 @@ const PerformanceReport = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="courses" className="space-y-4">
+        <TabsContent value="topPerformers" className="space-y-4 animate-in fade-in-50">
           <Card>
             <CardHeader>
-              <CardTitle>Course Comparison</CardTitle>
-              <CardDescription>Average performance by course</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowUpIcon className="h-5 w-5 text-green-500" />
+                Top Performing Students
+              </CardTitle>
+              <CardDescription>
+                Students with grades of 90% or higher
+              </CardDescription>
             </CardHeader>
-            <CardContent className="h-80">
-              {/* This would be a real chart component in production */}
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                Course comparison chart would render here
-              </div>
+            <CardContent>
+              {topPerformers.length > 0 ? (
+                renderStudentTable(topPerformers)
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No top performers found in the current time range
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="needsImprovement" className="space-y-4 animate-in fade-in-50">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowDownIcon className="h-5 w-5 text-red-500" />
+                Students Needing Improvement
+              </CardTitle>
+              <CardDescription>
+                Students with grades below 70%
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {needsImprovement.length > 0 ? (
+                renderStudentTable(needsImprovement)
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No students need improvement in the current time range
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -236,8 +381,7 @@ const PerformanceReport = () => {
               <CardTitle>Performance Over Time</CardTitle>
               <CardDescription>How student performance has changed over time</CardDescription>
             </CardHeader>
-            <CardContent className="h-80">
-              {/* Placeholder for the trends component */}
+            <CardContent className="h-auto">
               <PerformanceTrends />
             </CardContent>
           </Card>
