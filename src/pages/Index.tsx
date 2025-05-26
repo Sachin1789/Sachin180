@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import StudentList from '@/components/StudentList';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import BatchImport from '@/components/BatchImport';
 import VoiceAssistant from '@/components/VoiceAssistant';
+import { Student } from '@/types/Student';
 import { 
   Users, 
   GraduationCap, 
@@ -34,7 +34,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const { toast } = useToast();
 
   // Animation states
@@ -53,7 +53,16 @@ const Index = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      // Map the Supabase data to match our Student interface
+      return data?.map(student => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        grade: student.grade,
+        course: student.course,
+        enrollmentDate: student.enrollment_date.split('T')[0] // Convert timestamp to date string
+      })) as Student[] || [];
     },
   });
 
@@ -84,7 +93,7 @@ const Index = () => {
     student.course.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleStudentsImported = async (importedStudents) => {
+  const handleStudentsImported = async (importedStudents: any[]) => {
     // Refresh the students list after import
     await refetch();
     toast({
@@ -93,12 +102,12 @@ const Index = () => {
     });
   };
 
-  const handleEditStudent = (student) => {
+  const handleEditStudent = (student: Student) => {
     setEditingStudent(student);
     setShowForm(true);
   };
 
-  const handleDeleteStudent = async (id) => {
+  const handleDeleteStudent = async (id: string) => {
     try {
       const { error } = await supabase
         .from('students')
