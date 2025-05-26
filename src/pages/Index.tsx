@@ -1,414 +1,315 @@
+
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
-import { Student, StudentFormData } from '@/types/Student';
-import StudentList from '@/components/StudentList';
-import StudentForm from '@/components/StudentForm';
-import SearchBar from '@/components/SearchBar';
-import BatchImport from '@/components/BatchImport';
-import AnalyticsDashboard from '@/components/AnalyticsDashboard';
-import StudentInsights from '@/components/StudentInsights';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/providers/AuthProvider';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import StudentForm from '@/components/StudentForm';
+import StudentList from '@/components/StudentList';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import BatchImport from '@/components/BatchImport';
+import VoiceAssistant from '@/components/VoiceAssistant';
+import { 
+  Users, 
+  GraduationCap, 
+  TrendingUp, 
+  Award, 
+  Search,
+  Plus,
+  Upload,
+  BarChart3,
+  BookOpen,
+  Target,
+  Star,
+  UserCheck
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-  const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  // Fetch students from Supabase
-  const { data: students = [], isLoading } = useQuery({
+  // Animation states
+  const [animateCards, setAnimateCards] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setAnimateCards(true), 100);
+  }, []);
+
+  const { data: students, isLoading } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .order('name', { ascending: true });
-        
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive'
-        });
-        throw new Error(error.message);
-      }
+        .order('created_at', { ascending: false });
       
-      return data.map((student) => ({
-        id: student.id,
-        name: student.name,
-        email: student.email,
-        grade: student.grade,
-        course: student.course,
-        enrollmentDate: student.enrollment_date
-      })) as Student[];
-    }
+      if (error) throw error;
+      return data;
+    },
   });
 
-  // Add student mutation
-  const addStudentMutation = useMutation({
-    mutationFn: async (studentData: StudentFormData) => {
-      if (!user) throw new Error('User not authenticated');
+  const { data: analytics } = useQuery({
+    queryKey: ['analytics'],
+    queryFn: async () => {
+      if (!students?.length) return null;
       
-      const { data, error } = await supabase
-        .from('students')
-        .insert({
-          name: studentData.name,
-          email: studentData.email,
-          grade: studentData.grade,
-          course: studentData.course,
-          enrollment_date: studentData.enrollmentDate,
-          created_by: user.id
-        })
-        .select();
-        
-      if (error) throw new Error(error.message);
-      return data[0];
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      toast({
-        title: 'Success',
-        description: 'Student added successfully'
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Update student mutation
-  const updateStudentMutation = useMutation({
-    mutationFn: async ({ id, ...studentData }: Student) => {
-      const { data, error } = await supabase
-        .from('students')
-        .update({
-          name: studentData.name,
-          email: studentData.email,
-          grade: studentData.grade,
-          course: studentData.course,
-          enrollment_date: studentData.enrollmentDate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select();
-        
-      if (error) throw new Error(error.message);
-      return data[0];
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      toast({
-        title: 'Success',
-        description: 'Student updated successfully'
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Delete student mutation
-  const deleteStudentMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-        
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      toast({
-        title: 'Success',
-        description: 'Student deleted successfully'
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Filter students based on search query
-  useEffect(() => {
-    if (!students) return;
-    
-    if (!searchQuery.trim()) {
-      setFilteredStudents(students);
-      return;
-    }
-    
-    const lowerQuery = searchQuery.toLowerCase();
-    const filtered = students.filter(
-      student =>
-        student.name.toLowerCase().includes(lowerQuery) ||
-        student.email.toLowerCase().includes(lowerQuery) ||
-        student.course.toLowerCase().includes(lowerQuery)
-    );
-    setFilteredStudents(filtered);
-  }, [searchQuery, students]);
-
-  // Handle welcome animation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowWelcomeAnimation(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Handle search
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  // Add a new student
-  const handleAddStudent = (studentData: StudentFormData) => {
-    addStudentMutation.mutate(studentData);
-    setIsStudentFormOpen(false);
-  };
-
-  // Edit an existing student
-  const handleEditStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setIsStudentFormOpen(true);
-  };
-
-  // Submit edited student
-  const handleSubmitEdit = (studentData: StudentFormData) => {
-    if (!selectedStudent) return;
-    
-    updateStudentMutation.mutate({
-      ...studentData,
-      id: selectedStudent.id
-    });
-    
-    setIsStudentFormOpen(false);
-    setSelectedStudent(undefined);
-  };
-
-  // Delete a student
-  const handleDeleteStudent = (id: string) => {
-    deleteStudentMutation.mutate(id);
-  };
-
-  // Import students from CSV
-  const handleStudentsImported = async (importedStudents: Student[]) => {
-    if (!user) return;
-    
-    // Create an import log entry
-    const { data: logEntry, error: logError } = await supabase
-      .from('import_logs')
-      .insert({
-        user_id: user.id,
-        filename: `batch-${new Date().toISOString()}`,
-        total_rows: importedStudents.length,
-        successful_rows: importedStudents.length, // Optimistic
-        status: 'processing'
-      })
-      .select();
+      const totalStudents = students.length;
+      const averageGrade = students.reduce((acc, student) => acc + student.grade, 0) / totalStudents;
+      const topPerformers = students.filter(student => student.grade >= 85).length;
+      const needsImprovement = students.filter(student => student.grade < 70).length;
       
-    if (logError) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create import log',
-        variant: 'destructive'
-      });
-      return;
+      return {
+        totalStudents,
+        averageGrade: Math.round(averageGrade * 10) / 10,
+        topPerformers,
+        needsImprovement
+      };
+    },
+    enabled: !!students?.length
+  });
+
+  const statsCards = [
+    {
+      title: "Total Students",
+      value: analytics?.totalStudents || 0,
+      icon: Users,
+      color: "bg-gradient-to-br from-blue-500 to-blue-600",
+      textColor: "text-blue-600",
+      bgColor: "bg-blue-50",
+      description: "Active enrollments"
+    },
+    {
+      title: "Average Grade",
+      value: `${analytics?.averageGrade || 0}%`,
+      icon: TrendingUp,
+      color: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+      textColor: "text-emerald-600",
+      bgColor: "bg-emerald-50",
+      description: "Overall performance"
+    },
+    {
+      title: "Top Performers",
+      value: analytics?.topPerformers || 0,
+      icon: Award,
+      color: "bg-gradient-to-br from-amber-500 to-amber-600",
+      textColor: "text-amber-600",
+      bgColor: "bg-amber-50",
+      description: "Grade ≥ 85%"
+    },
+    {
+      title: "Need Support",
+      value: analytics?.needsImprovement || 0,
+      icon: Target,
+      color: "bg-gradient-to-br from-red-500 to-red-600",
+      textColor: "text-red-600",
+      bgColor: "bg-red-50",
+      description: "Grade < 70%"
     }
-    
-    // Insert students one by one, collecting results
-    let successful = 0;
-    let failed = 0;
-    const errors = [];
-    
-    for (const student of importedStudents) {
-      try {
-        const { error } = await supabase
-          .from('students')
-          .insert({
-            name: student.name,
-            email: student.email,
-            grade: student.grade,
-            course: student.course,
-            enrollment_date: student.enrollmentDate,
-            created_by: user.id
-          });
-          
-        if (error) {
-          failed++;
-          errors.push({
-            email: student.email,
-            error: error.message
-          });
-        } else {
-          successful++;
-        }
-      } catch (error: any) {
-        failed++;
-        errors.push({
-          email: student.email,
-          error: error.message
-        });
-      }
-    }
-    
-    // Update import log with results
-    await supabase
-      .from('import_logs')
-      .update({
-        successful_rows: successful,
-        failed_rows: failed,
-        status: 'completed',
-        errors: errors.length > 0 ? errors : null
-      })
-      .eq('id', logEntry[0].id);
-    
-    // Refresh students list
-    queryClient.invalidateQueries({ queryKey: ['students'] });
-    
-    toast({
-      title: 'Import Complete',
-      description: `Successfully imported ${successful} students. Failed: ${failed}.`
-    });
-  };
-
-  // Extract average grade from the student data for the StudentInsights component
-  const calculateAverageGrade = (): number => {
-    if (!students || students.length === 0) return 0;
-    const sum = students.reduce((acc, student) => acc + Number(student.grade), 0);
-    return Math.round(sum / students.length);
-  };
-
-  // Calculate course completion percentage (mock data)
-  const calculateCourseCompletion = (): number => {
-    // This would typically come from real data, but for demo purposes:
-    return Math.round(65 + Math.random() * 20);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-6 flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-background transition-opacity duration-500 ${showWelcomeAnimation ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="container mx-auto py-6 space-y-6 px-4">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-primary glow-text animate-float">Student Data Management</h1>
-          <p className="text-muted-foreground">
-            Manage student records, grades, and courses with enhanced analytics and bulk import capabilities.
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="container mx-auto p-6 space-y-8 max-w-7xl">
+        {/* Header Section */}
+        <div className={`text-center space-y-4 transform transition-all duration-700 ${animateCards ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+          <div className="flex items-center justify-center space-x-3 mb-4">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <GraduationCap className="h-6 w-6 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Student Management System
+            </h1>
+          </div>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Comprehensive platform for managing student records, tracking performance, and generating insights
           </p>
         </div>
 
-        <Tabs defaultValue="dashboard" className="w-full">
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-1 shadow-md mb-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dashboard</TabsTrigger>
-              <TabsTrigger value="students" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Student List</TabsTrigger>
-              <TabsTrigger value="import" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Batch Import</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="dashboard" className="space-y-4 pt-4">
-            <Card className="w-full glass-effect">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <span className="mr-2">Analytics Dashboard</span>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                    Real-time
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AnalyticsDashboard />
-              </CardContent>
-            </Card>
-            
-            {/* New StudentInsights component */}
-            <StudentInsights 
-              studentCount={students.length}
-              averageGrade={calculateAverageGrade()}
-              courseCompletion={calculateCourseCompletion()}
-            />
-            
-            <div className="flex justify-center mt-8 animate-float">
-              <button 
-                className="flex items-center text-primary hover:text-primary/80 transition-colors"
-                onClick={() => {
-                  document.getElementById('students-section')?.scrollIntoView({
-                    behavior: 'smooth'
-                  });
-                }}
-              >
-                Scroll to Students <ChevronDown className="ml-1" />
-              </button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="students" className="space-y-4 pt-4" id="students-section">
-            <Card className="w-full glass-effect">
-              <CardHeader className="pb-3">
-                <CardTitle>Students</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <SearchBar
-                    onSearch={handleSearch}
-                    onAddNew={() => {
-                      setSelectedStudent(undefined);
-                      setIsStudentFormOpen(true);
-                    }}
-                  />
-                  
-                  <StudentList
-                    students={filteredStudents}
-                    onEditStudent={handleEditStudent}
-                    onDeleteStudent={handleDeleteStudent}
-                  />
+        {/* Quick Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statsCards.map((stat, index) => (
+            <Card 
+              key={stat.title} 
+              className={`border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 ${stat.bgColor} transform ${animateCards ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
+              style={{ transitionDelay: `${index * 100}ms` }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">{stat.title}</p>
+                    <p className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                  </div>
+                  <div className={`h-12 w-12 rounded-full ${stat.color} flex items-center justify-center shadow-md`}>
+                    <stat.icon className="h-6 w-6 text-white" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          ))}
+        </div>
 
-          <TabsContent value="import" className="pt-4">
-            <BatchImport onStudentsImported={handleStudentsImported} />
-          </TabsContent>
-        </Tabs>
+        {/* Main Content */}
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-4 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+              <div>
+                <CardTitle className="text-2xl font-bold text-gray-900">Management Dashboard</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Manage students, view analytics, and generate reports
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link to="/performance-report">
+                  <Button variant="outline" className="bg-white/80 hover:bg-white border-indigo-200 hover:border-indigo-300">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Performance Reports
+                  </Button>
+                </Link>
+                <VoiceAssistant />
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid grid-cols-4 lg:w-max bg-gray-100/80 h-12">
+                <TabsTrigger value="overview" className="flex items-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <BookOpen className="h-4 w-4" />
+                  <span className="hidden sm:inline">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="students" className="flex items-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="hidden sm:inline">Students</span>
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Analytics</span>
+                </TabsTrigger>
+                <TabsTrigger value="import" className="flex items-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline">Import</span>
+                </TabsTrigger>
+              </TabsList>
 
-        <StudentForm
-          open={isStudentFormOpen}
-          onClose={() => {
-            setIsStudentFormOpen(false);
-            setSelectedStudent(undefined);
-          }}
-          onSubmit={selectedStudent ? handleSubmitEdit : handleAddStudent}
-          student={selectedStudent}
-        />
+              <TabsContent value="overview" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center space-x-2">
+                        <Plus className="h-5 w-5 text-indigo-600" />
+                        <span>Quick Actions</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Button 
+                        onClick={() => setShowForm(true)} 
+                        className="w-full justify-start bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Student
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start border-gray-200 hover:bg-gray-50">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import Students
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start border-gray-200 hover:bg-gray-50">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Generate Report
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center space-x-2">
+                        <Star className="h-5 w-5 text-amber-600" />
+                        <span>Recent Activity</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {students?.slice(0, 3).map((student, index) => (
+                          <div key={student.id} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                              {student.name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{student.name}</p>
+                              <p className="text-sm text-gray-500">{student.email}</p>
+                            </div>
+                            <Badge variant={student.grade >= 80 ? "default" : student.grade >= 70 ? "secondary" : "destructive"}>
+                              {student.grade}%
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="students" className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search students by name, email, or subject..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-white border-gray-200 focus:border-indigo-300 focus:ring-indigo-200"
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => setShowForm(true)}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
+                </div>
+                
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <StudentList searchTerm={searchTerm} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <AnalyticsDashboard />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="import">
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <BatchImport />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Student Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Student</h2>
+                <p className="text-gray-600 mt-1">Enter student information below</p>
+              </div>
+              <div className="p-6">
+                <StudentForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
