@@ -33,6 +33,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
   const { toast } = useToast();
 
   // Animation states
@@ -42,7 +44,7 @@ const Index = () => {
     setTimeout(() => setAnimateCards(true), 100);
   }, []);
 
-  const { data: students, isLoading } = useQuery({
+  const { data: students, isLoading, refetch } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -74,6 +76,61 @@ const Index = () => {
     },
     enabled: !!students?.length
   });
+
+  // Filter students based on search term
+  const filteredStudents = students?.filter(student =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.course.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const handleStudentsImported = async (importedStudents) => {
+    // Refresh the students list after import
+    await refetch();
+    toast({
+      title: "Students Imported",
+      description: `Successfully imported ${importedStudents.length} students.`,
+    });
+  };
+
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setShowForm(true);
+  };
+
+  const handleDeleteStudent = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await refetch();
+      toast({
+        title: "Student Deleted",
+        description: "Student has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete student.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFormSuccess = async () => {
+    setShowForm(false);
+    setEditingStudent(null);
+    await refetch();
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingStudent(null);
+  };
 
   const statsCards = [
     {
@@ -173,7 +230,13 @@ const Index = () => {
                     Performance Reports
                   </Button>
                 </Link>
-                <VoiceAssistant />
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowVoiceAssistant(true)}
+                  className="bg-white/80 hover:bg-white border-indigo-200 hover:border-indigo-300"
+                >
+                  Voice Assistant
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -216,14 +279,20 @@ const Index = () => {
                         <Plus className="h-4 w-4 mr-2" />
                         Add New Student
                       </Button>
-                      <Button variant="outline" className="w-full justify-start border-gray-200 hover:bg-gray-50">
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start border-gray-200 hover:bg-gray-50"
+                        onClick={() => setActiveTab('import')}
+                      >
                         <Upload className="h-4 w-4 mr-2" />
                         Import Students
                       </Button>
-                      <Button variant="outline" className="w-full justify-start border-gray-200 hover:bg-gray-50">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Generate Report
-                      </Button>
+                      <Link to="/performance-report">
+                        <Button variant="outline" className="w-full justify-start border-gray-200 hover:bg-gray-50">
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Generate Report
+                        </Button>
+                      </Link>
                     </CardContent>
                   </Card>
 
@@ -261,7 +330,7 @@ const Index = () => {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Search students by name, email, or subject..."
+                      placeholder="Search students by name, email, or course..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 bg-white border-gray-200 focus:border-indigo-300 focus:ring-indigo-200"
@@ -277,7 +346,11 @@ const Index = () => {
                 </div>
                 
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                  <StudentList searchTerm={searchTerm} />
+                  <StudentList 
+                    students={filteredStudents}
+                    onEditStudent={handleEditStudent}
+                    onDeleteStudent={handleDeleteStudent}
+                  />
                 </div>
               </TabsContent>
 
@@ -289,7 +362,7 @@ const Index = () => {
 
               <TabsContent value="import">
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                  <BatchImport />
+                  <BatchImport onStudentsImported={handleStudentsImported} />
                 </div>
               </TabsContent>
             </Tabs>
@@ -301,15 +374,28 @@ const Index = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
-                <h2 className="text-xl font-semibold text-gray-900">Add New Student</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingStudent ? 'Edit Student' : 'Add New Student'}
+                </h2>
                 <p className="text-gray-600 mt-1">Enter student information below</p>
               </div>
               <div className="p-6">
-                <StudentForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
+                <StudentForm 
+                  open={showForm}
+                  onClose={handleFormClose}
+                  onSubmit={handleFormSuccess}
+                  student={editingStudent}
+                />
               </div>
             </div>
           </div>
         )}
+
+        {/* Voice Assistant */}
+        <VoiceAssistant 
+          isOpen={showVoiceAssistant}
+          onClose={() => setShowVoiceAssistant(false)}
+        />
       </div>
     </div>
   );

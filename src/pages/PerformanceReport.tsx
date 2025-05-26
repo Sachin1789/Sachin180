@@ -30,6 +30,7 @@ const PerformanceReport = () => {
   const [analysis, setAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [animateCards, setAnimateCards] = useState(false);
+  const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -148,7 +149,13 @@ const PerformanceReport = () => {
                 </Button>
               </Link>
             </div>
-            <VoiceAssistant />
+            <Button 
+              variant="outline" 
+              onClick={() => setShowVoiceAssistant(true)}
+              className="bg-white/80 hover:bg-white border-indigo-200 hover:border-indigo-300"
+            >
+              Voice Assistant
+            </Button>
           </div>
 
           <div className="text-center space-y-4">
@@ -252,7 +259,7 @@ const PerformanceReport = () => {
                             <div>
                               <h3 className="font-semibold text-gray-900">{student.name}</h3>
                               <p className="text-sm text-gray-600">{student.email}</p>
-                              <p className="text-sm font-medium text-emerald-700">{student.subject}</p>
+                              <p className="text-sm font-medium text-emerald-700">{student.course}</p>
                             </div>
                           </div>
                           <div className="text-right space-y-2">
@@ -299,7 +306,7 @@ const PerformanceReport = () => {
                             <div>
                               <h3 className="font-semibold text-gray-900">{student.name}</h3>
                               <p className="text-sm text-gray-600">{student.email}</p>
-                              <p className="text-sm font-medium text-amber-700">{student.subject}</p>
+                              <p className="text-sm font-medium text-amber-700">{student.course}</p>
                             </div>
                           </div>
                           <div className="text-right space-y-2">
@@ -347,7 +354,7 @@ const PerformanceReport = () => {
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">{student.name}</p>
-                                <p className="text-sm text-gray-600">{student.subject}</p>
+                                <p className="text-sm text-gray-600">{student.course}</p>
                               </div>
                             </div>
                             <Badge variant={student.grade >= 80 ? "default" : student.grade >= 70 ? "secondary" : "destructive"}>
@@ -384,7 +391,7 @@ const PerformanceReport = () => {
                               <h3 className="font-semibold text-gray-900">{selectedStudent.name}</h3>
                               <p className="text-sm text-gray-600">{selectedStudent.email}</p>
                               <div className="flex items-center space-x-2 mt-1">
-                                <Badge>{selectedStudent.subject}</Badge>
+                                <Badge>{selectedStudent.course}</Badge>
                                 <Badge variant={selectedStudent.grade >= 80 ? "default" : selectedStudent.grade >= 70 ? "secondary" : "destructive"}>
                                   {selectedStudent.grade}%
                                 </Badge>
@@ -419,6 +426,13 @@ const PerformanceReport = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Voice Assistant */}
+        <VoiceAssistant 
+          content={analysis}
+          isOpen={showVoiceAssistant}
+          onClose={() => setShowVoiceAssistant(false)}
+        />
       </div>
     </div>
   );
