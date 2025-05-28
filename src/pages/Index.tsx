@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,13 +193,11 @@ const Index = () => {
   const handleImportComplete = async (result: ImportResult) => {
     if (!user) return;
 
-    // Add the current user ID to each successful student before adding to state
     const studentsWithUser = result.successful.map(student => ({
       ...student,
       created_by: user.id
     }));
 
-    // Insert successful students into the database
     if (studentsWithUser.length > 0) {
       try {
         const { error } = await supabase
@@ -217,7 +214,6 @@ const Index = () => {
 
         if (error) throw error;
 
-        // Refresh the students list
         await fetchStudents();
       } catch (error: any) {
         toast({
@@ -243,6 +239,11 @@ const Index = () => {
       student.course.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredStudents(filtered);
+  };
+
+  const handleAddNew = () => {
+    setEditingStudent(undefined);
+    setIsFormOpen(true);
   };
 
   if (loading) {
@@ -276,10 +277,7 @@ const Index = () => {
                 Import CSV
               </Button>
               <Button 
-                onClick={() => {
-                  setEditingStudent(undefined);
-                  setIsFormOpen(true);
-                }}
+                onClick={handleAddNew}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -291,12 +289,15 @@ const Index = () => {
 
         {/* Analytics Dashboard */}
         <div className="mb-8">
-          <AnalyticsDashboard students={filteredStudents} />
+          <AnalyticsDashboard />
         </div>
 
         {/* Search and Filter Section */}
         <div className="mb-6">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar 
+            onSearch={handleSearch}
+            onAddNew={handleAddNew}
+          />
         </div>
 
         {/* Students Section */}
@@ -326,11 +327,34 @@ const Index = () => {
           student={editingStudent}
         />
 
-        <BatchImport
-          open={isImportOpen}
-          onClose={() => setIsImportOpen(false)}
-          onImportComplete={handleImportComplete}
-        />
+        {isImportOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Import Students</h2>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setIsImportOpen(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+              <div className="p-4">
+                <BatchImport onStudentsImported={(students) => {
+                  const importResult: ImportResult = {
+                    successful: students,
+                    failed: [],
+                    totalRows: students.length
+                  };
+                  handleImportComplete(importResult);
+                }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
